@@ -7,16 +7,19 @@ interface RateLimitEntry {
 }
 
 const store = new Map<string, RateLimitEntry>();
+let lastCleanupAt = 0;
 
-// Clean up expired entries periodically
-setInterval(() => {
-  const now = Date.now();
+function cleanupExpiredEntries(now: number) {
+  // Run cleanup at most once per minute to avoid extra work on hot paths.
+  if (now - lastCleanupAt < 60000) return;
+  lastCleanupAt = now;
+
   store.forEach((entry, key) => {
     if (entry.resetAt < now) {
       store.delete(key);
     }
   });
-}, 60000);
+}
 
 export function rateLimit(
   key: string,
@@ -24,6 +27,7 @@ export function rateLimit(
   windowMs: number
 ): { allowed: boolean; remaining: number; resetAt: number } {
   const now = Date.now();
+  cleanupExpiredEntries(now);
   const entry = store.get(key);
 
   if (!entry || entry.resetAt < now) {

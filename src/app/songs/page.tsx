@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Music, ArrowUpDown, Search, ArrowLeft, Loader2 } from 'lucide-react';
+import { Music, ArrowUpDown, Search, ArrowLeft, Loader2, HelpCircle } from 'lucide-react';
 
 interface Song {
   id: string;
@@ -91,13 +91,22 @@ export default function SongsPage() {
               <p className="text-zinc-400 text-sm">{songs.length} piesní celkom</p>
             </div>
           </div>
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="text-zinc-400 hover:text-white flex items-center gap-1.5 text-sm"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Späť na panel
-          </button>
+          <div className="flex items-center gap-3">
+            <a
+              href="mailto:lukasrajnic@elvoaq.com"
+              className="text-zinc-400 hover:text-indigo-400 flex items-center gap-1.5 text-sm"
+            >
+              <HelpCircle className="w-4 h-4" />
+              Pomoc
+            </a>
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="text-zinc-400 hover:text-white flex items-center gap-1.5 text-sm"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Späť na panel
+            </button>
+          </div>
         </div>
       </header>
 

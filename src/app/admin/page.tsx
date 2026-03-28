@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Music, Users, Activity, Download, LogOut, Shield, Loader2,
-  ChevronDown, ChevronRight, AlertTriangle
+  ChevronDown, ChevronRight, AlertTriangle, HelpCircle
 } from 'lucide-react';
 
 type Tab = 'songs' | 'byUser' | 'users' | 'activity' | 'export';
@@ -184,9 +184,18 @@ export default function AdminPage() {
               <p className="text-zinc-400 text-sm">Stuzkova — Správa piesní</p>
             </div>
           </div>
-          <button onClick={handleLogout} className="text-zinc-400 hover:text-white flex items-center gap-1.5 text-sm">
-            <LogOut className="w-4 h-4" /> Odhlásiť
-          </button>
+          <div className="flex items-center gap-3">
+            <a
+              href="mailto:lukasrajnic@elvoaq.com"
+              className="text-zinc-400 hover:text-indigo-400 flex items-center gap-1.5 text-sm"
+            >
+              <HelpCircle className="w-4 h-4" />
+              Pomoc
+            </a>
+            <button onClick={handleLogout} className="text-zinc-400 hover:text-white flex items-center gap-1.5 text-sm">
+              <LogOut className="w-4 h-4" /> Odhlásiť
+            </button>
+          </div>
         </div>
       </header>
 

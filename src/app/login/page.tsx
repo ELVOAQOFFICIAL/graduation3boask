@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { LogIn, User, Mail, KeyRound, Loader2 } from 'lucide-react';
+import { LogIn, User, Mail, KeyRound, Loader2, HelpCircle } from 'lucide-react';
 import Turnstile from '@/components/Turnstile';
 
 export default function LoginPage() {
@@ -192,6 +192,26 @@ export default function LoginPage() {
                 Zadajte svoje prihlasovacie údaje, ktoré ste dostali.
               </p>
 
+              {/* Explanatory notes */}
+              <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-lg p-3 mb-4 text-sm">
+                <p className="text-indigo-300 font-medium mb-1">ℹ️ Formát používateľského mena</p>
+                <p className="text-zinc-400">
+                  Vaše meno a priezvisko spolu, malými písmenami, bez diakritiky a medzier.
+                </p>
+                <p className="text-zinc-500 mt-1">
+                  Príklad: <span className="text-indigo-400 font-mono">Ján Novák</span> →{' '}
+                  <span className="text-white font-mono">jannovak</span>
+                </p>
+              </div>
+
+              <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg p-3 mb-4 text-sm">
+                <p className="text-amber-300 font-medium mb-1">🔑 Heslo</p>
+                <p className="text-zinc-400">
+                  Heslo, ktoré ste dostali, je platné na celú sezónu. Po prvom prihlásení a overení
+                  sa pri ďalšom prihlásení použije rovnaké heslo.
+                </p>
+              </div>
+
               <div className="space-y-3">
                 <div>
                   <label className="block text-sm text-zinc-400 mb-1">Používateľské meno</label>
@@ -358,9 +378,18 @@ export default function LoginPage() {
           )}
         </div>
 
-        <p className="text-center text-zinc-600 text-xs mt-6">
-          Elvoaq AG · graduation3boask.elvoaq.com
-        </p>
+        <div className="text-center mt-6 space-y-3">
+          <a
+            href="mailto:lukasrajnic@elvoaq.com"
+            className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 text-sm"
+          >
+            <HelpCircle className="w-4 h-4" />
+            Potrebujete pomoc? Kontaktujte správcu
+          </a>
+          <p className="text-zinc-600 text-xs">
+            Elvoaq AG · graduation3boask.elvoaq.com
+          </p>
+        </div>
       </div>
     </div>
   );

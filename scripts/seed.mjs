@@ -48,14 +48,25 @@ const guests = [
   ['Maximilián', 'Žitňanský'],
 ];
 
+/** Strip diacritics and produce a lowercase ASCII-only string */
+function removeDiacritics(str) {
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+/**
+ * Username = first name + last name, no spaces, no diacritics, all lowercase.
+ * e.g. "Ján Novák" → "jannovak"
+ */
+function generateUsername(firstName, lastName) {
+  return removeDiacritics(firstName.replace(/\s+/g, '') + lastName.replace(/\s+/g, ''));
+}
+
 function generatePassword(index) {
   const num = String(index + 1).padStart(2, '0');
   return `GraduationStuzkova3BMusic!${num}#`;
-}
-
-function generateUsername(index) {
-  const num = String(index + 1).padStart(2, '0');
-  return `graduationstuzkova3bmusic.${num}`;
 }
 
 async function main() {
@@ -67,7 +78,7 @@ async function main() {
   
   for (let i = 0; i < guests.length; i++) {
     const [firstName, lastName] = guests[i];
-    const username = generateUsername(i);
+    const username = generateUsername(firstName, lastName);
     const password = generatePassword(i);
     const passwordHash = await bcrypt.hash(password, COST_FACTOR);
     

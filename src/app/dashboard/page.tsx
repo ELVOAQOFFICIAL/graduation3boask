@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Music, Plus, Trash2, Search, LogOut, List, Loader2 } from 'lucide-react';
+import { Music, Plus, Trash2, Search, LogOut, List, Loader2, HelpCircle } from 'lucide-react';
 
 interface Song {
   id: string;
@@ -177,6 +177,13 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <a
+              href="mailto:lukasrajnic@elvoaq.com"
+              className="text-zinc-400 hover:text-indigo-400 flex items-center gap-1.5 text-sm"
+            >
+              <HelpCircle className="w-4 h-4" />
+              Pomoc
+            </a>
             <button
               onClick={() => router.push('/songs')}
               className="text-zinc-400 hover:text-white flex items-center gap-1.5 text-sm"

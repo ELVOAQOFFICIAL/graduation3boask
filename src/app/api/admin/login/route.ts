@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { compare } from 'bcryptjs';
 import { verifyTurnstile } from '@/lib/auth/turnstile';
 import { createSession, setSessionCookie } from '@/lib/auth/session';
 import { rateLimit } from '@/lib/rate-limit';
@@ -9,6 +8,20 @@ import { sendGeoAlertEmail } from '@/lib/email';
 
 export const runtime = 'edge';
 
+/** Constant-time string comparison via SHA-256 to avoid timing attacks */
+async function timingSafeEqual(a: string, b: string): Promise<boolean> {
+  const enc = new TextEncoder();
+  const [ha, hb] = await Promise.all([
+    crypto.subtle.digest('SHA-256', enc.encode(a)),
+    crypto.subtle.digest('SHA-256', enc.encode(b)),
+  ]);
+  const va = new Uint8Array(ha);
+  const vb = new Uint8Array(hb);
+  if (va.length !== vb.length) return false;
+  let diff = 0;
+  for (let i = 0; i < va.length; i++) diff |= va[i] ^ vb[i];
+  return diff === 0;
+}
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
@@ -42,19 +55,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Verify admin credentials from env
-  const adminUsernameHash = process.env.ADMIN_USERNAME_HASH;
-  const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH;
+  // Verify admin credentials from env (plaintext comparison via SHA-256)
+  const adminUsername = process.env.ADMIN_USERNAME;
+  const adminPassword = process.env.ADMIN_PASSWORD;
 
-  if (!adminUsernameHash || !adminPasswordHash) {
+  if (!adminUsername || !adminPassword) {
     return NextResponse.json(
       { error: 'Konfigurácia servera nie je správna.' },
       { status: 500 }
     );
   }
 
-  const usernameValid = await compare(username, adminUsernameHash);
-  const passwordValid = await compare(password, adminPasswordHash);
+  const usernameValid = await timingSafeEqual(username, adminUsername);
+  const passwordValid = await timingSafeEqual(password, adminPassword);
 
   if (!usernameValid || !passwordValid) {
     await logActivity({

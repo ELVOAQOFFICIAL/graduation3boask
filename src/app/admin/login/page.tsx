@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Shield, Loader2 } from 'lucide-react';
+import { Shield, Loader2, HelpCircle } from 'lucide-react';
 import Turnstile from '@/components/Turnstile';
 
 export default function AdminLoginPage() {
@@ -95,6 +95,16 @@ export default function AdminLoginPage() {
               Prihlásiť sa
             </button>
           </form>
+        </div>
+
+        <div className="text-center mt-6">
+          <a
+            href="mailto:lukasrajnic@elvoaq.com"
+            className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 text-sm"
+          >
+            <HelpCircle className="w-4 h-4" />
+            Potrebujete pomoc? Kontaktujte správcu
+          </a>
         </div>
       </div>
     </div>

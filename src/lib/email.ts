@@ -1,13 +1,20 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResendClient(): Resend | null {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return null;
+  return new Resend(apiKey);
+}
 
 export async function sendOtpEmail(to: string, code: string): Promise<boolean> {
+  const resend = getResendClient();
+  if (!resend) return false;
+
   try {
     const { error } = await resend.emails.send({
       from: 'noreply@graduation3boask.elvoaq.com',
       to,
-        subject: 'Tvoj overovací kód pre Stuzkova',
+      subject: 'Tvoj overovací kód pre Stuzkova',
       text: `Tvoj overovací kód je: ${code}\n\nKód je platný 10 minút.\n\nAk si tento kód nevyžiadal/a, ignoruj tento email.`,
     });
 
@@ -32,6 +39,9 @@ export async function sendGeoAlertEmail(params: {
 }): Promise<void> {
   const adminEmail = process.env.ADMIN_ALERT_EMAIL;
   if (!adminEmail) return;
+
+  const resend = getResendClient();
+  if (!resend) return;
 
   try {
     await resend.emails.send({
