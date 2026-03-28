@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
   // Look up user
   const { data: user, error } = await supabaseAdmin
     .from('users')
-    .select('id, username, password_hash, is_active, identity_confirmed, role, email, first_name, last_name')
+    .select('id, username, password_hash, is_active, identity_confirmed, role, email, first_name, last_name, last_login_at')
     .eq('username', username.trim())
     .single();
 
@@ -80,8 +80,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Returning users who already confirmed identity and email can log in with password.
-  if (user.identity_confirmed && user.email) {
+  // Returning users: confirmed identity + email + completed at least one full login (password was set).
+  // Users who abandoned setup before layer 4 (password setup) have identity_confirmed + email
+  // but no last_login_at — they should go through first-time flow again.
+  if (user.identity_confirmed && user.email && user.last_login_at) {
     if (!password || typeof password !== 'string') {
       return NextResponse.json(
         { error: 'Zadajte heslo pre návrat do účtu.' },
@@ -100,7 +102,7 @@ export async function POST(request: NextRequest) {
         metadata: { layer: 1, reason: 'wrong_password' },
       });
       return NextResponse.json(
-        { error: 'Nesprávne prihlasovacie údaje.' },
+        { error: 'Nesprávne heslo. Ak ste heslo zabudli, kontaktujte správcu na lukasrajnic@elvoaq.com.' },
         { status: 401 }
       );
     }

@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
   // OTP valid — get user info
   const { data: user } = await supabaseAdmin
     .from('users')
-    .select('id, first_name, last_name, role, identity_confirmed')
+    .select('id, first_name, last_name, role, identity_confirmed, last_login_at')
     .eq('id', layer1.userId)
     .single();
 
@@ -124,8 +124,10 @@ export async function POST(request: NextRequest) {
 
   const displayName = `${user.first_name} ${user.last_name}`.trim();
 
-  // First full login path: after identity + OTP, force user to set own password.
-  if (layer2) {
+  // First login path: user has never completed full setup (no last_login_at).
+  // This covers both the normal first login (layer 1→2→3→4) and abandoned setups
+  // where user completed layers 1-3 previously but never set their password in layer 4.
+  if (!user.last_login_at) {
     await setLayerCookie(3, user.id);
 
     await logActivity({

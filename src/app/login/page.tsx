@@ -26,6 +26,10 @@ export default function LoginPage() {
 		setTurnstileToken(token);
 	}, []);
 
+	const onTurnstileExpire = useCallback(() => {
+		setTurnstileToken('');
+	}, []);
+
 	const handleLayer1 = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setError('');
@@ -220,18 +224,19 @@ export default function LoginPage() {
 								<h2 className="text-lg font-semibold">Prihlasenie</h2>
 							</div>
 							<p className="text-zinc-400 text-sm mb-4">
-								Najprv overime pouzivatelske meno. Pri dalsich prihlaseniach pouzijete aj svoje heslo.
+								Zadajte svoje pouzivatelske meno. Ak sa prihlasujete prvykrat, heslo nechajte prazdne — nastavite si ho po overeni uctu.
 							</p>
 
 							<div className="bg-indigo-500/5 border border-indigo-500/20 rounded-lg p-3 mb-4 text-sm">
 								<p className="text-indigo-300 font-medium mb-1">Format pouzivatelskeho mena</p>
 								<p className="text-zinc-400">Meno a priezvisko spolu, bez medzier, bez diakritiky, malymi pismenami.</p>
-								<p className="text-zinc-500 mt-1">Priklad: <span className="text-white font-mono">Jan Novak - jannovak</span></p>
+								<p className="text-zinc-500 mt-1">Priklad: <span className="text-white font-mono">Jan Novak → jannovak</span></p>
 							</div>
 
 							<div className="bg-amber-500/5 border border-amber-500/20 rounded-lg p-3 mb-4 text-sm">
-								<p className="text-amber-300 font-medium mb-1">Prve prihlasenie a heslo</p>
-								<p className="text-zinc-400">Po overeni uctu si nastavite vlastne heslo. To bude platit pre dalsie prihlasenia.</p>
+								<p className="text-amber-300 font-medium mb-1">Ako funguje prihlasenie?</p>
+								<p className="text-zinc-400 mb-1"><span className="text-white font-medium">Prvy raz:</span> Zadajte len pouzivatelske meno (bez hesla). Po overeni vasej totoznosti a emailu si nastavite vlastne heslo.</p>
+								<p className="text-zinc-400"><span className="text-white font-medium">Pri navrate:</span> Zadajte pouzivatelske meno aj heslo, ktore ste si nastavili pri prvom prihlaseni.</p>
 							</div>
 
 							<div className="space-y-3">
@@ -247,7 +252,7 @@ export default function LoginPage() {
 									/>
 								</div>
 								<div>
-									<label className="block text-sm text-zinc-400 mb-1">Heslo (iba pri navrate)</label>
+									<label className="block text-sm text-zinc-400 mb-1">Heslo <span className="text-zinc-500">(len ak uz mate ucet nastaveny)</span></label>
 									<input
 										type="password"
 										value={password}
@@ -258,7 +263,7 @@ export default function LoginPage() {
 								</div>
 							</div>
 
-							<Turnstile onVerify={onTurnstileVerify} />
+							<Turnstile onVerify={onTurnstileVerify} onExpire={onTurnstileExpire} />
 
 							<button
 								type="submit"
@@ -302,7 +307,7 @@ export default function LoginPage() {
 								</div>
 							</div>
 
-							<Turnstile onVerify={onTurnstileVerify} />
+							<Turnstile onVerify={onTurnstileVerify} onExpire={onTurnstileExpire} />
 
 							<button
 								type="submit"
@@ -335,7 +340,7 @@ export default function LoginPage() {
 								/>
 							</div>
 
-							<Turnstile onVerify={onTurnstileVerify} />
+							<Turnstile onVerify={onTurnstileVerify} onExpire={onTurnstileExpire} />
 
 							<button
 								type="submit"
@@ -405,7 +410,11 @@ export default function LoginPage() {
 								<Lock className="w-5 h-5 text-indigo-400" />
 								<h2 className="text-lg font-semibold">Nastavenie hesla</h2>
 							</div>
-							<p className="text-zinc-400 text-sm mb-4">Nastavte si vlastne heslo. Toto heslo budete pouzivat pri kazdom dalsom prihlaseni.</p>
+							<p className="text-zinc-400 text-sm mb-2">Nastavte si vlastne heslo. Toto heslo budete pouzivat pri kazdom dalsom prihlaseni spolu s vasim pouzivatelskym menom.</p>
+							<div className="bg-green-500/5 border border-green-500/20 rounded-lg p-3 mb-4 text-sm">
+								<p className="text-green-300 font-medium mb-1">Zapamätajte si heslo!</p>
+								<p className="text-zinc-400">Pri nasledujucom prihlaseni zadajte svoje pouzivatelske meno a toto heslo. Uz nebudete musiet overovat totoznost ani email.</p>
+							</div>
 
 							<div className="space-y-3">
 								<div>

@@ -48,6 +48,7 @@ npm run cf:deploy
 - `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
 - `TURNSTILE_SECRET_KEY`
 - `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL` (recommended, must be a verified sender/domain in Resend)
 - `ADMIN_ALERT_EMAIL`
 - `ADMIN_USERNAME_HASH`
 - `ADMIN_PASSWORD_HASH`
