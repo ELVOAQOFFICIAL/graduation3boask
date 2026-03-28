@@ -17,7 +17,6 @@ export async function POST(request: NextRequest) {
 
   // Verify Layer 1 cookie exists
   const layer1 = await verifyLayerCookie(1);
-  const layer2 = await verifyLayerCookie(2);
   if (!layer1) {
     return NextResponse.json(
       { error: 'Najprv dokončite prvý krok prihlásenia.' },
