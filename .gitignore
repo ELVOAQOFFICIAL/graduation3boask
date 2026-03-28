@@ -28,6 +28,16 @@ yarn-error.log*
 # local env files
 .env*.local
 
+# credentials output (sensitive)
+scripts/full-output.txt
+supabase/seed-data.sql
+scripts/admin-initial-credentials.txt
+.admin-secrets.tmp
+
+# temporary local artifacts
+src/app/favicon 3.ico
+src/app/favicon-route-bak/
+
 # vercel
 .vercel
 

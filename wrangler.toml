@@ -1,0 +1,4 @@
+name = "graduation3boask"
+compatibility_date = "2026-03-28"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".vercel/output/static"
