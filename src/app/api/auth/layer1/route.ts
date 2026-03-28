@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { compare } from 'bcryptjs';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { verifyTurnstile } from '@/lib/auth/turnstile';
-import { setLayerCookie } from '@/lib/auth/layers';
+import { clearLayerCookies, setLayerCookie } from '@/lib/auth/layers';
+import { createSession, setSessionCookie } from '@/lib/auth/session';
 import { rateLimit } from '@/lib/rate-limit';
 import { logActivity, getClientIp } from '@/lib/activity-log';
+import { getGeoInfo, isOutsideSlovakia } from '@/lib/geo';
+import { sendGeoAlertEmail } from '@/lib/email';
 
 export const runtime = 'edge';
 
@@ -50,7 +53,7 @@ export async function POST(request: NextRequest) {
   // Look up user
   const { data: user, error } = await supabaseAdmin
     .from('users')
-    .select('id, username, password_hash, is_active, identity_confirmed, role')
+    .select('id, username, password_hash, is_active, identity_confirmed, role, email, first_name, last_name')
     .eq('username', username.trim())
     .single();
 
@@ -100,6 +103,57 @@ export async function POST(request: NextRequest) {
     userAgent,
     metadata: { layer: 1 },
   });
+
+  // Returning users who already confirmed identity and email skip further verification.
+  if (user.identity_confirmed && user.email) {
+    const displayName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username;
+
+    const token = await createSession({
+      userId: user.id,
+      role: user.role as 'user' | 'admin',
+      displayName,
+    }, 24);
+
+    await setSessionCookie(token, 24);
+    await clearLayerCookies();
+
+    await supabaseAdmin
+      .from('users')
+      .update({ last_login_at: new Date().toISOString() })
+      .eq('id', user.id);
+
+    const geo = await getGeoInfo(ip);
+    const geoAlert = geo ? isOutsideSlovakia(geo.countryCode) : false;
+
+    await logActivity({
+      userId: user.id,
+      eventType: 'session_started',
+      success: true,
+      ipAddress: ip,
+      countryCode: geo?.countryCode || null,
+      city: geo?.city || null,
+      userAgent,
+      geoAlert,
+      metadata: { note: 'Opätovná relácia — bez email OTP' },
+    });
+
+    if (geoAlert && geo) {
+      await sendGeoAlertEmail({
+        displayName,
+        ip,
+        country: geo.countryCode,
+        city: geo.city,
+        userAgent,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      sessionReady: true,
+      message: 'Prihlásenie úspešné. Vitajte späť!',
+    });
+  }
 
   // Set layer 1 cookie
   await setLayerCookie(1, user.id);

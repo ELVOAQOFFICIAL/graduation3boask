@@ -11,7 +11,6 @@
  */
 
 import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
 
 const COST_FACTOR = 12;
 
@@ -49,17 +48,14 @@ const guests = [
   ['Maximilián', 'Žitňanský'],
 ];
 
-function generatePassword() {
-  return crypto.randomBytes(12).toString('base64url'); // ~16 chars, URL-safe
+function generatePassword(index) {
+  const num = String(index + 1).padStart(2, '0');
+  return `GraduationStuzkova3BMusic!${num}#`;
 }
 
-function generateUsername(firstName, lastName, index) {
-  // Create a simple username: first letter of first name + normalized last name + 2-digit number
-  const normFirst = firstName.split(' ')[0].toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  const normLast = lastName.toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  return `${normFirst}.${normLast}`;
+function generateUsername(index) {
+  const num = String(index + 1).padStart(2, '0');
+  return `graduationstuzkova3bmusic.${num}`;
 }
 
 async function main() {
@@ -69,22 +65,10 @@ async function main() {
   const userInserts = [];
   const nameInserts = [];
   
-  // Track usernames to avoid duplicates
-  const usedUsernames = new Set();
-  
   for (let i = 0; i < guests.length; i++) {
     const [firstName, lastName] = guests[i];
-    let username = generateUsername(firstName, lastName, i);
-    
-    // Handle duplicate usernames (e.g., two Šiková)
-    if (usedUsernames.has(username)) {
-      const firstInitial = firstName.split(' ')[0].toLowerCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      username = `${firstInitial}.${lastName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}2`;
-    }
-    usedUsernames.add(username);
-    
-    const password = generatePassword();
+    const username = generateUsername(i);
+    const password = generatePassword(i);
     const passwordHash = await bcrypt.hash(password, COST_FACTOR);
     
     credentials.push({

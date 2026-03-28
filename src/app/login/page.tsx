@@ -47,6 +47,11 @@ export default function LoginPage() {
         return;
       }
 
+      if (data.sessionReady) {
+        router.push('/dashboard');
+        return;
+      }
+
       setTurnstileToken('');
       setLayer(data.nextLayer);
     } catch {
