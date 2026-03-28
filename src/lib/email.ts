@@ -7,7 +7,7 @@ export async function sendOtpEmail(to: string, code: string): Promise<boolean> {
     const { error } = await resend.emails.send({
       from: 'noreply@graduation3boask.elvoaq.com',
       to,
-      subject: 'Tvoj overovací kód pre Promočnú párty',
+        subject: 'Tvoj overovací kód pre Stuzkova',
       text: `Tvoj overovací kód je: ${code}\n\nKód je platný 10 minút.\n\nAk si tento kód nevyžiadal/a, ignoruj tento email.`,
     });
 

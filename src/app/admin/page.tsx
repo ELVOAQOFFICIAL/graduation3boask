@@ -181,7 +181,7 @@ export default function AdminPage() {
             <Shield className="w-6 h-6 text-indigo-400" />
             <div>
               <h1 className="font-bold text-lg">Admin panel</h1>
-              <p className="text-zinc-400 text-sm">Promočná párty — Správa piesní</p>
+              <p className="text-zinc-400 text-sm">Stuzkova — Správa piesní</p>
             </div>
           </div>
           <button onClick={handleLogout} className="text-zinc-400 hover:text-white flex items-center gap-1.5 text-sm">

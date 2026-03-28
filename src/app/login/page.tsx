@@ -139,7 +139,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">🎓 Promočná párty</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">🎓 Stuzkova</h1>
           <p className="text-zinc-400">Žiadosti o piesne</p>
         </div>
 

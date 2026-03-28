@@ -4,10 +4,10 @@ import "./globals.css";
 export const runtime = 'edge';
 
 export const metadata: Metadata = {
-  title: "Promočná párty — Žiadosti o piesne",
-  description: "Platforma pre žiadosti o piesne na promočnú párty",
+  title: "Stuzkova — Žiadosti o piesne",
+  description: "Platforma pre žiadosti o piesne na Stuzkova",
   icons: {
-    icon: "/favicon.ico",
+    icon: "/icon.svg",
   },
 };
 

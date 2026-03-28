@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     // Get unique users count
     const uniqueUsers = new Set(rows.map(r => r.submittedBy)).size;
     
-    let txt = `PROMOČNÁ PÁRTY — ŽIADOSTI O PIESNE\n`;
+    let txt = `STUZKOVA — ŽIADOSTI O PIESNE\n`;
     txt += `Vygenerované: ${new Date().toLocaleString('sk-SK')}\n\n`;
     txt += `Celkom: ${rows.length} piesní od ${uniqueUsers} hostí\n\n`;
     txt += `${'─'.repeat(50)}\n`;
