@@ -5,7 +5,7 @@ function getResendApiKey(): string | null {
 }
 
 function getResendFromAddress(): string {
-  return process.env.RESEND_FROM_EMAIL ?? 'noreply-graduation3boask@elvoaq.com';
+  return 'noreply-graduation3boask@elvoaq.com';
 }
 
 async function sendResendEmail(params: {
