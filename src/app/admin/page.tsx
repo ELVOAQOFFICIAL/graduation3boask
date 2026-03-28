@@ -219,6 +219,16 @@ export default function AdminPage() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 py-6">
+        <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-lg p-3 mb-4 text-sm">
+          <p className="text-indigo-300 font-medium mb-1">Admin 2FA (voliteľné)</p>
+          <p className="text-zinc-400">
+            Admin 2FA sa aktivuje cez Cloudflare env vars:
+            {' '}<span className="text-white font-mono">ADMIN_2FA_ENABLED=true</span>
+            {' '}a{' '}
+            <span className="text-white font-mono">ADMIN_2FA_EMAIL</span>.
+          </p>
+        </div>
+
         {/* All Songs Tab */}
         {tab === 'songs' && (
           <div className="bg-zinc-800 border border-zinc-700 rounded-lg overflow-hidden">

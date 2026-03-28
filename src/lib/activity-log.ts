@@ -8,6 +8,7 @@ export type EventType =
   | 'otp_validated'
   | 'session_started'
   | 'session_ended'
+  | 'password_set'
   | 'song_added'
   | 'song_deleted'
   | 'admin_login'

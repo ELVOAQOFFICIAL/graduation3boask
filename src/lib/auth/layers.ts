@@ -44,4 +44,5 @@ export async function clearLayerCookies() {
   const cookieStore = await cookies();
   cookieStore.delete('layer1_passed');
   cookieStore.delete('layer2_passed');
+  cookieStore.delete('layer3_passed');
 }

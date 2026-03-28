@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { SignJWT } from 'jose';
 import { verifyTurnstile } from '@/lib/auth/turnstile';
 import { createSession, setSessionCookie } from '@/lib/auth/session';
 import { rateLimit } from '@/lib/rate-limit';
 import { logActivity, getClientIp } from '@/lib/activity-log';
 import { getGeoInfo, isOutsideSlovakia } from '@/lib/geo';
-import { sendGeoAlertEmail } from '@/lib/email';
+import { sendGeoAlertEmail, sendAdminOtpEmail } from '@/lib/email';
 
 export const runtime = 'edge';
+const challengeSecret = new TextEncoder().encode(process.env.SESSION_SECRET || 'fallback-secret-change-me');
 
 /** Constant-time string comparison via SHA-256 to avoid timing attacks */
 async function timingSafeEqual(a: string, b: string): Promise<boolean> {
@@ -81,6 +83,58 @@ export async function POST(request: NextRequest) {
       { error: 'Nesprávne prihlasovacie údaje.' },
       { status: 401 }
     );
+  }
+
+  const adminTwoFactorEnabled = String(process.env.ADMIN_2FA_ENABLED || 'false').toLowerCase() === 'true';
+  const adminTwoFactorEmail = process.env.ADMIN_2FA_EMAIL || process.env.ADMIN_ALERT_EMAIL;
+
+  if (adminTwoFactorEnabled) {
+    if (!adminTwoFactorEmail) {
+      return NextResponse.json(
+        { error: 'Admin 2FA je zapnuté, ale chýba ADMIN_2FA_EMAIL.' },
+        { status: 500 }
+      );
+    }
+
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const sent = await sendAdminOtpEmail(adminTwoFactorEmail, code);
+
+    if (!sent) {
+      return NextResponse.json(
+        { error: 'Nepodarilo sa odoslať admin 2FA kód.' },
+        { status: 500 }
+      );
+    }
+
+    const challenge = await new SignJWT({ code } as unknown as Record<string, unknown>)
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('10m')
+      .sign(challengeSecret);
+
+    const response = NextResponse.json({
+      success: true,
+      requiresTwoFactor: true,
+      message: '2FA kód bol odoslaný na admin email.',
+    });
+
+    response.cookies.set('admin_2fa_challenge', challenge, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      maxAge: 600,
+      path: '/',
+    });
+
+    await logActivity({
+      eventType: 'admin_login',
+      success: true,
+      ipAddress: ip,
+      userAgent,
+      metadata: { twoFactor: true, phase: 'challenge_sent' },
+    });
+
+    return response;
   }
 
   // Create admin session (8h TTL)

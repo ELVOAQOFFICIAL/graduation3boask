@@ -7,7 +7,9 @@ import { createSession, setSessionCookie } from '@/lib/auth/session';
 import { rateLimit } from '@/lib/rate-limit';
 import { logActivity, getClientIp } from '@/lib/activity-log';
 import { getGeoInfo, isOutsideSlovakia } from '@/lib/geo';
-import { sendGeoAlertEmail } from '@/lib/email';
+import { sendGeoAlertEmail, sendOtpEmail } from '@/lib/email';
+import { hash } from 'bcryptjs';
+import { maskEmail } from '@/lib/utils';
 
 export const runtime = 'edge';
 
@@ -34,9 +36,9 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { username, password, turnstileToken } = body;
 
-  if (!username || !password) {
+  if (!username) {
     return NextResponse.json(
-      { error: 'Zadajte používateľské meno a heslo.' },
+      { error: 'Zadajte používateľské meno.' },
       { status: 400 }
     );
   }
@@ -78,34 +80,98 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Compare password
-  const passwordValid = await compare(password, user.password_hash);
-  if (!passwordValid) {
+  // Returning users who already confirmed identity and email can log in with password.
+  if (user.identity_confirmed && user.email) {
+    if (!password || typeof password !== 'string') {
+      return NextResponse.json(
+        { error: 'Zadajte heslo pre návrat do účtu.' },
+        { status: 400 }
+      );
+    }
+
+    const passwordValid = await compare(password, user.password_hash);
+    if (!passwordValid) {
+      await logActivity({
+        userId: user.id,
+        eventType: 'login_attempt',
+        success: false,
+        ipAddress: ip,
+        userAgent,
+        metadata: { layer: 1, reason: 'wrong_password' },
+      });
+      return NextResponse.json(
+        { error: 'Nesprávne prihlasovacie údaje.' },
+        { status: 401 }
+      );
+    }
+
     await logActivity({
       userId: user.id,
       eventType: 'login_attempt',
-      success: false,
+      success: true,
       ipAddress: ip,
       userAgent,
-      metadata: { layer: 1, reason: 'wrong_password' },
+      metadata: { layer: 1, mode: 'returning_password' },
     });
-    return NextResponse.json(
-      { error: 'Nesprávne prihlasovacie údaje.' },
-      { status: 401 }
-    );
-  }
 
-  await logActivity({
-    userId: user.id,
-    eventType: 'login_attempt',
-    success: true,
-    ipAddress: ip,
-    userAgent,
-    metadata: { layer: 1 },
-  });
+    // Optional 2FA for users (stored in user_security_settings table)
+    let userTwoFactorEnabled = false;
+    const twoFactorRes = await supabaseAdmin
+      .from('user_security_settings')
+      .select('two_factor_enabled')
+      .eq('user_id', user.id)
+      .single();
 
-  // Returning users who already confirmed identity and email skip further verification.
-  if (user.identity_confirmed && user.email) {
+    if (!twoFactorRes.error && twoFactorRes.data?.two_factor_enabled) {
+      userTwoFactorEnabled = true;
+    }
+
+    if (userTwoFactorEnabled) {
+      const code = String(Math.floor(100000 + Math.random() * 900000));
+      const codeHash = await hash(code, 12);
+
+      await supabaseAdmin
+        .from('otp_codes')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('used', false);
+
+      await supabaseAdmin
+        .from('otp_codes')
+        .insert({
+          user_id: user.id,
+          code_hash: codeHash,
+          email: user.email,
+          expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+        });
+
+      const sent = await sendOtpEmail(user.email, code);
+      if (!sent) {
+        return NextResponse.json(
+          { error: 'Nepodarilo sa odoslať 2FA kód. Skúste znova.' },
+          { status: 500 }
+        );
+      }
+
+      await setLayerCookie(1, user.id);
+
+      await logActivity({
+        userId: user.id,
+        eventType: 'otp_requested',
+        ipAddress: ip,
+        userAgent,
+        metadata: { email: maskEmail(user.email), reason: 'user_2fa_login' },
+      });
+
+      return NextResponse.json({
+        success: true,
+        nextLayer: 3,
+        requiresTwoFactor: true,
+        maskedEmail: maskEmail(user.email),
+        message: '2FA kód bol odoslaný na váš email.',
+      });
+    }
+
     const displayName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username;
 
     const token = await createSession({
@@ -154,6 +220,15 @@ export async function POST(request: NextRequest) {
       message: 'Prihlásenie úspešné. Vitajte späť!',
     });
   }
+
+  await logActivity({
+    userId: user.id,
+    eventType: 'login_attempt',
+    success: true,
+    ipAddress: ip,
+    userAgent,
+    metadata: { layer: 1, mode: 'first_login_username' },
+  });
 
   // Set layer 1 cookie
   await setLayerCookie(1, user.id);

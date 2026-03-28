@@ -4,7 +4,7 @@ import { jwtVerify } from 'jose';
 
 const secret = new TextEncoder().encode(process.env.SESSION_SECRET || 'fallback-secret-change-me');
 
-const publicPaths = ['/login', '/admin/login', '/api/auth/layer1', '/api/auth/layer2', '/api/auth/layer3', '/api/admin/login'];
+const publicPaths = ['/login', '/admin/login', '/api/auth/layer1', '/api/auth/layer2', '/api/auth/layer3', '/api/auth/password/set', '/api/admin/login'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

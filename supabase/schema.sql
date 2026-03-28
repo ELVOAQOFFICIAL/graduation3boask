@@ -56,6 +56,13 @@ CREATE TABLE otp_codes (
   created_at  TIMESTAMPTZ DEFAULT now()
 );
 
+-- 4b. User security settings (optional 2FA)
+CREATE TABLE user_security_settings (
+  user_id              UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  two_factor_enabled   BOOLEAN NOT NULL DEFAULT FALSE,
+  updated_at           TIMESTAMPTZ DEFAULT now()
+);
+
 -- 5. Activity log table
 CREATE TABLE activity_log (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),

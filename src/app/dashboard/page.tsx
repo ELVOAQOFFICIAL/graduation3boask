@@ -26,6 +26,9 @@ export default function DashboardPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [twoFactorLoaded, setTwoFactorLoaded] = useState(false);
+  const [twoFactorSaving, setTwoFactorSaving] = useState(false);
 
   // Song form
   const [songName, setSongName] = useState('');
@@ -64,9 +67,46 @@ export default function DashboardPage() {
     }
   }, []);
 
+  const fetchTwoFactor = useCallback(async () => {
+    const res = await fetch('/api/auth/2fa');
+    if (res.ok) {
+      const data = await res.json();
+      setTwoFactorEnabled(Boolean(data.enabled));
+    }
+    setTwoFactorLoaded(true);
+  }, []);
+
   useEffect(() => {
-    Promise.all([fetchUser(), fetchSongs()]).finally(() => setLoading(false));
-  }, [fetchUser, fetchSongs]);
+    Promise.all([fetchUser(), fetchSongs(), fetchTwoFactor()]).finally(() => setLoading(false));
+  }, [fetchUser, fetchSongs, fetchTwoFactor]);
+
+  const toggleTwoFactor = async () => {
+    setError('');
+    setSuccess('');
+    setTwoFactorSaving(true);
+
+    try {
+      const nextValue = !twoFactorEnabled;
+      const res = await fetch('/api/auth/2fa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: nextValue }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Nepodarilo sa uložiť 2FA nastavenie.');
+        return;
+      }
+
+      setTwoFactorEnabled(Boolean(data.enabled));
+      setSuccess(nextValue ? '2FA bolo zapnuté.' : '2FA bolo vypnuté.');
+    } catch {
+      setError('Chyba pripojenia. Skúste znova.');
+    } finally {
+      setTwoFactorSaving(false);
+    }
+  };
 
   const handleSearch = (query: string) => {
     setSongName(query);
@@ -214,6 +254,24 @@ export default function DashboardPage() {
             <p className="text-green-400 text-sm">{success}</p>
           </div>
         )}
+
+        <div className="bg-zinc-800 border border-zinc-700 rounded-lg p-4 mb-6">
+          <h2 className="font-semibold text-base mb-2">Bezpečnosť účtu (voliteľné 2FA)</h2>
+          <p className="text-zinc-400 text-sm mb-3">
+            Ak zapnete 2FA, po zadaní správneho hesla vám pri každom prihlásení pošleme emailový kód.
+          </p>
+          <button
+            onClick={toggleTwoFactor}
+            disabled={!twoFactorLoaded || twoFactorSaving}
+            className="inline-flex items-center gap-2 bg-zinc-900 border border-zinc-700 hover:border-indigo-500 disabled:opacity-50 rounded-lg px-3 py-2 text-sm"
+          >
+            {twoFactorSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            {twoFactorEnabled ? 'Vypnúť 2FA' : 'Zapnúť 2FA'}
+          </button>
+          <p className="text-zinc-500 text-xs mt-2">
+            Aktuálny stav: {twoFactorLoaded ? (twoFactorEnabled ? 'Zapnuté' : 'Vypnuté') : 'Načítavam...'}
+          </p>
+        </div>
 
         {/* Add Song Button / Form */}
         {!showForm ? (

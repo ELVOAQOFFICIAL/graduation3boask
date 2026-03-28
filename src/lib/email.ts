@@ -29,6 +29,29 @@ export async function sendOtpEmail(to: string, code: string): Promise<boolean> {
   }
 }
 
+export async function sendAdminOtpEmail(to: string, code: string): Promise<boolean> {
+  const resend = getResendClient();
+  if (!resend) return false;
+
+  try {
+    const { error } = await resend.emails.send({
+      from: 'noreply@graduation3boask.elvoaq.com',
+      to,
+      subject: 'Admin 2FA kód pre Stuzkova',
+      text: `Tvoj admin 2FA kód je: ${code}\n\nKód je platný 10 minút.\n\nAk si tento kód nevyžiadal/a, okamžite zmeň admin heslo.`,
+    });
+
+    if (error) {
+      console.error('Resend admin OTP error:', error);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('Failed to send admin OTP email:', error);
+    return false;
+  }
+}
+
 export async function sendGeoAlertEmail(params: {
   displayName: string | null;
   ip: string;

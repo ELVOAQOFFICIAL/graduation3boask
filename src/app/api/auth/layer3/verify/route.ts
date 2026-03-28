@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { compare } from 'bcryptjs';
 import { supabaseAdmin } from '@/lib/supabase/server';
-import { verifyLayerCookie, clearLayerCookies } from '@/lib/auth/layers';
+import { verifyLayerCookie, clearLayerCookies, setLayerCookie } from '@/lib/auth/layers';
 import { createSession, setSessionCookie } from '@/lib/auth/session';
 import { rateLimit } from '@/lib/rate-limit';
 import { logActivity, getClientIp } from '@/lib/activity-log';
@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
 
   // Verify Layer 1 cookie exists
   const layer1 = await verifyLayerCookie(1);
+  const layer2 = await verifyLayerCookie(2);
   if (!layer1) {
     return NextResponse.json(
       { error: 'Najprv dokončite prvý krok prihlásenia.' },
@@ -122,6 +123,27 @@ export async function POST(request: NextRequest) {
   }
 
   const displayName = `${user.first_name} ${user.last_name}`.trim();
+
+  // First full login path: after identity + OTP, force user to set own password.
+  if (layer2) {
+    await setLayerCookie(3, user.id);
+
+    await logActivity({
+      userId: user.id,
+      eventType: 'otp_validated',
+      success: true,
+      ipAddress: ip,
+      userAgent,
+      metadata: { layer: 3, next: 'password_setup' },
+    });
+
+    return NextResponse.json({
+      success: true,
+      needsPasswordSetup: true,
+      nextLayer: 4,
+      message: 'Overenie úspešné. Teraz si nastavte vlastné heslo pre ďalšie prihlásenia.',
+    });
+  }
 
   // Create session
   const token = await createSession({

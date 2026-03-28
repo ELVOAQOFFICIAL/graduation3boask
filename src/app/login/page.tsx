@@ -2,395 +2,458 @@
 
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { LogIn, User, Mail, KeyRound, Loader2, HelpCircle } from 'lucide-react';
+import { LogIn, User, Mail, KeyRound, Loader2, HelpCircle, Lock } from 'lucide-react';
 import Turnstile from '@/components/Turnstile';
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [layer, setLayer] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [turnstileToken, setTurnstileToken] = useState('');
+	const router = useRouter();
+	const [layer, setLayer] = useState(1);
+	const [loading, setLoading] = useState(false);
+	const [error, setError] = useState('');
+	const [turnstileToken, setTurnstileToken] = useState('');
+	const [username, setUsername] = useState('');
+	const [password, setPassword] = useState('');
+	const [firstName, setFirstName] = useState('');
+	const [lastName, setLastName] = useState('');
+	const [email, setEmail] = useState('');
+	const [otpSent, setOtpSent] = useState(false);
+	const [otp, setOtp] = useState('');
+	const [isTwoFactorLogin, setIsTwoFactorLogin] = useState(false);
+	const [newPassword, setNewPassword] = useState('');
+	const [confirmPassword, setConfirmPassword] = useState('');
 
-  // Layer 1 fields
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+	const onTurnstileVerify = useCallback((token: string) => {
+		setTurnstileToken(token);
+	}, []);
 
-  // Layer 2 fields
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
+	const handleLayer1 = async (e: React.FormEvent) => {
+		e.preventDefault();
+		setError('');
+		setLoading(true);
 
-  // Layer 3 fields
-  const [email, setEmail] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
-  const [otp, setOtp] = useState('');
+		try {
+			const res = await fetch('/api/auth/layer1', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ username, password, turnstileToken }),
+			});
+			const data = await res.json();
 
-  const onTurnstileVerify = useCallback((token: string) => {
-    setTurnstileToken(token);
-  }, []);
+			if (!res.ok) {
+				setError(data.error);
+				return;
+			}
 
-  const handleLayer1 = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+			if (data.sessionReady) {
+				router.push('/dashboard');
+				return;
+			}
 
-    try {
-      const res = await fetch('/api/auth/layer1', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, turnstileToken }),
-      });
-      const data = await res.json();
+			if (data.requiresTwoFactor) {
+				setIsTwoFactorLogin(true);
+				setOtpSent(true);
+				setEmail(data.maskedEmail || '');
+				setLayer(3);
+				return;
+			}
 
-      if (!res.ok) {
-        setError(data.error);
-        return;
-      }
+			setIsTwoFactorLogin(false);
+			setTurnstileToken('');
+			setLayer(data.nextLayer);
+		} catch {
+			setError('Chyba pripojenia. Skuste znova.');
+		} finally {
+			setLoading(false);
+		}
+	};
 
-      if (data.sessionReady) {
-        router.push('/dashboard');
-        return;
-      }
+	const handleLayer2 = async (e: React.FormEvent) => {
+		e.preventDefault();
+		setError('');
+		setLoading(true);
 
-      setTurnstileToken('');
-      setLayer(data.nextLayer);
-    } catch {
-      setError('Chyba pripojenia. Skúste znova.');
-    } finally {
-      setLoading(false);
-    }
-  };
+		try {
+			const res = await fetch('/api/auth/layer2', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ firstName, lastName, turnstileToken }),
+			});
+			const data = await res.json();
 
-  const handleLayer2 = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+			if (!res.ok) {
+				setError(data.error);
+				return;
+			}
 
-    try {
-      const res = await fetch('/api/auth/layer2', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ firstName, lastName, turnstileToken }),
-      });
-      const data = await res.json();
+			setTurnstileToken('');
+			setLayer(data.nextLayer);
+		} catch {
+			setError('Chyba pripojenia. Skuste znova.');
+		} finally {
+			setLoading(false);
+		}
+	};
 
-      if (!res.ok) {
-        setError(data.error);
-        return;
-      }
+	const handleRequestOtp = async (e: React.FormEvent) => {
+		e.preventDefault();
+		setError('');
+		setLoading(true);
 
-      setTurnstileToken('');
-      setLayer(data.nextLayer);
-    } catch {
-      setError('Chyba pripojenia. Skúste znova.');
-    } finally {
-      setLoading(false);
-    }
-  };
+		try {
+			const res = await fetch('/api/auth/layer3/request', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ email, turnstileToken }),
+			});
+			const data = await res.json();
 
-  const handleRequestOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+			if (!res.ok) {
+				setError(data.error);
+				return;
+			}
 
-    try {
-      const res = await fetch('/api/auth/layer3/request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, turnstileToken }),
-      });
-      const data = await res.json();
+			setOtpSent(true);
+		} catch {
+			setError('Chyba pripojenia. Skuste znova.');
+		} finally {
+			setLoading(false);
+		}
+	};
 
-      if (!res.ok) {
-        setError(data.error);
-        return;
-      }
+	const handleVerifyOtp = async (e: React.FormEvent) => {
+		e.preventDefault();
+		setError('');
+		setLoading(true);
 
-      setOtpSent(true);
-    } catch {
-      setError('Chyba pripojenia. Skúste znova.');
-    } finally {
-      setLoading(false);
-    }
-  };
+		try {
+			const res = await fetch('/api/auth/layer3/verify', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ code: otp }),
+			});
+			const data = await res.json();
 
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+			if (!res.ok) {
+				setError(data.error);
+				return;
+			}
 
-    try {
-      const res = await fetch('/api/auth/layer3/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: otp }),
-      });
-      const data = await res.json();
+			if (data.needsPasswordSetup) {
+				setLayer(4);
+				return;
+			}
 
-      if (!res.ok) {
-        setError(data.error);
-        return;
-      }
+			router.push('/dashboard');
+		} catch {
+			setError('Chyba pripojenia. Skuste znova.');
+		} finally {
+			setLoading(false);
+		}
+	};
 
-      router.push('/dashboard');
-    } catch {
-      setError('Chyba pripojenia. Skúste znova.');
-    } finally {
-      setLoading(false);
-    }
-  };
+	const handleSetPassword = async (e: React.FormEvent) => {
+		e.preventDefault();
+		setError('');
+		setLoading(true);
 
-  return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">🎓 Stuzkova</h1>
-          <p className="text-zinc-400">Žiadosti o piesne</p>
-        </div>
+		try {
+			const res = await fetch('/api/auth/password/set', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ password: newPassword, confirmPassword }),
+			});
+			const data = await res.json();
 
-        {/* Progress indicator */}
-        <div className="flex items-center justify-center gap-2 mb-8">
-          {[1, 2, 3].map((step) => (
-            <div key={step} className="flex items-center gap-2">
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  step < layer
-                    ? 'bg-indigo-500 text-white'
-                    : step === layer
-                    ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500'
-                    : 'bg-zinc-800 text-zinc-500 border border-zinc-700'
-                }`}
-              >
-                {step}
-              </div>
-              {step < 3 && (
-                <div
-                  className={`w-8 h-0.5 ${
-                    step < layer ? 'bg-indigo-500' : 'bg-zinc-700'
-                  }`}
-                />
-              )}
-            </div>
-          ))}
-        </div>
+			if (!res.ok) {
+				setError(data.error);
+				return;
+			}
 
-        <div className="bg-zinc-800 border border-zinc-700 rounded-lg p-6">
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-4">
-              <p className="text-red-400 text-sm">{error}</p>
-            </div>
-          )}
+			router.push('/dashboard');
+		} catch {
+			setError('Chyba pripojenia. Skuste znova.');
+		} finally {
+			setLoading(false);
+		}
+	};
 
-          {/* Layer 1: Credentials */}
-          {layer === 1 && (
-            <form onSubmit={handleLayer1}>
-              <div className="flex items-center gap-2 mb-4">
-                <KeyRound className="w-5 h-5 text-indigo-400" />
-                <h2 className="text-lg font-semibold">Prihlásenie</h2>
-              </div>
-              <p className="text-zinc-400 text-sm mb-4">
-                Zadajte svoje prihlasovacie údaje, ktoré ste dostali.
-              </p>
+	return (
+		<div className="min-h-screen flex items-center justify-center p-4">
+			<div className="w-full max-w-md">
+				<div className="text-center mb-8">
+					<h1 className="text-3xl font-bold text-white mb-2">Stuzkova</h1>
+					<p className="text-zinc-400">Ziadosti o piesne</p>
+				</div>
 
-              {/* Explanatory notes */}
-              <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-lg p-3 mb-4 text-sm">
-                <p className="text-indigo-300 font-medium mb-1">ℹ️ Formát používateľského mena</p>
-                <p className="text-zinc-400">
-                  Vaše meno a priezvisko spolu, malými písmenami, bez diakritiky a medzier.
-                </p>
-                <p className="text-zinc-500 mt-1">
-                  Príklad: <span className="text-indigo-400 font-mono">Ján Novák</span> →{' '}
-                  <span className="text-white font-mono">jannovak</span>
-                </p>
-              </div>
+				<div className="flex items-center justify-center gap-2 mb-8">
+					{[1, 2, 3, 4].map((step) => (
+						<div key={step} className="flex items-center gap-2">
+							<div
+								className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+									step < layer
+										? 'bg-indigo-500 text-white'
+										: step === layer
+										? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500'
+										: 'bg-zinc-800 text-zinc-500 border border-zinc-700'
+								}`}
+							>
+								{step}
+							</div>
+							{step < 4 && (
+								<div className={`w-6 h-0.5 ${step < layer ? 'bg-indigo-500' : 'bg-zinc-700'}`} />
+							)}
+						</div>
+					))}
+				</div>
 
-              <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg p-3 mb-4 text-sm">
-                <p className="text-amber-300 font-medium mb-1">🔑 Heslo</p>
-                <p className="text-zinc-400">
-                  Heslo, ktoré ste dostali, je platné na celú sezónu. Po prvom prihlásení a overení
-                  sa pri ďalšom prihlásení použije rovnaké heslo.
-                </p>
-              </div>
+				<div className="bg-zinc-800 border border-zinc-700 rounded-lg p-6">
+					{error && (
+						<div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-4">
+							<p className="text-red-400 text-sm">{error}</p>
+						</div>
+					)}
 
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm text-zinc-400 mb-1">Používateľské meno</label>
-                  <input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
-                    required
-                    autoComplete="username"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-zinc-400 mb-1">Heslo</label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
-                    required
-                    autoComplete="current-password"
-                  />
-                </div>
-              </div>
+					{layer === 1 && (
+						<form onSubmit={handleLayer1}>
+							<div className="flex items-center gap-2 mb-4">
+								<KeyRound className="w-5 h-5 text-indigo-400" />
+								<h2 className="text-lg font-semibold">Prihlasenie</h2>
+							</div>
+							<p className="text-zinc-400 text-sm mb-4">
+								Najprv overime pouzivatelske meno. Pri dalsich prihlaseniach pouzijete aj svoje heslo.
+							</p>
 
-              <Turnstile onVerify={onTurnstileVerify} />
+							<div className="bg-indigo-500/5 border border-indigo-500/20 rounded-lg p-3 mb-4 text-sm">
+								<p className="text-indigo-300 font-medium mb-1">Format pouzivatelskeho mena</p>
+								<p className="text-zinc-400">Meno a priezvisko spolu, bez medzier, bez diakritiky, malymi pismenami.</p>
+								<p className="text-zinc-500 mt-1">Priklad: <span className="text-white font-mono">Jan Novak - jannovak</span></p>
+							</div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white rounded-lg px-4 py-2.5 font-medium flex items-center justify-center gap-2 mt-4"
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
-                Pokračovať
-              </button>
-            </form>
-          )}
+							<div className="bg-amber-500/5 border border-amber-500/20 rounded-lg p-3 mb-4 text-sm">
+								<p className="text-amber-300 font-medium mb-1">Prve prihlasenie a heslo</p>
+								<p className="text-zinc-400">Po overeni uctu si nastavite vlastne heslo. To bude platit pre dalsie prihlasenia.</p>
+							</div>
 
-          {/* Layer 2: Name Confirmation */}
-          {layer === 2 && (
-            <form onSubmit={handleLayer2}>
-              <div className="flex items-center gap-2 mb-4">
-                <User className="w-5 h-5 text-indigo-400" />
-                <h2 className="text-lg font-semibold">Overenie totožnosti</h2>
-              </div>
-              <p className="text-zinc-400 text-sm mb-4">
-                Zadajte svoje meno a priezvisko pre potvrdenie totožnosti.
-              </p>
+							<div className="space-y-3">
+								<div>
+									<label className="block text-sm text-zinc-400 mb-1">Pouzivatelske meno</label>
+									<input
+										type="text"
+										value={username}
+										onChange={(e) => setUsername(e.target.value)}
+										className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
+										required
+										autoComplete="username"
+									/>
+								</div>
+								<div>
+									<label className="block text-sm text-zinc-400 mb-1">Heslo (iba pri navrate)</label>
+									<input
+										type="password"
+										value={password}
+										onChange={(e) => setPassword(e.target.value)}
+										className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
+										autoComplete="current-password"
+									/>
+								</div>
+							</div>
 
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm text-zinc-400 mb-1">Meno</label>
-                  <input
-                    type="text"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-zinc-400 mb-1">Priezvisko</label>
-                  <input
-                    type="text"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
-                    required
-                  />
-                </div>
-              </div>
+							<Turnstile onVerify={onTurnstileVerify} />
 
-              <Turnstile onVerify={onTurnstileVerify} />
+							<button
+								type="submit"
+								disabled={loading}
+								className="w-full bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white rounded-lg px-4 py-2.5 font-medium flex items-center justify-center gap-2 mt-4"
+							>
+								{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
+								Pokracovat
+							</button>
+						</form>
+					)}
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white rounded-lg px-4 py-2.5 font-medium flex items-center justify-center gap-2 mt-4"
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <User className="w-4 h-4" />}
-                Overiť
-              </button>
-            </form>
-          )}
+					{layer === 2 && (
+						<form onSubmit={handleLayer2}>
+							<div className="flex items-center gap-2 mb-4">
+								<User className="w-5 h-5 text-indigo-400" />
+								<h2 className="text-lg font-semibold">Overenie totoznosti</h2>
+							</div>
+							<p className="text-zinc-400 text-sm mb-4">Zadajte svoje meno a priezvisko pre potvrdenie totoznosti.</p>
 
-          {/* Layer 3: Email OTP */}
-          {layer === 3 && !otpSent && (
-            <form onSubmit={handleRequestOtp}>
-              <div className="flex items-center gap-2 mb-4">
-                <Mail className="w-5 h-5 text-indigo-400" />
-                <h2 className="text-lg font-semibold">Emailové overenie</h2>
-              </div>
-              <p className="text-zinc-400 text-sm mb-4">
-                Zadajte svoj email. Pošleme vám 6-miestny overovací kód.
-              </p>
+							<div className="space-y-3">
+								<div>
+									<label className="block text-sm text-zinc-400 mb-1">Meno</label>
+									<input
+										type="text"
+										value={firstName}
+										onChange={(e) => setFirstName(e.target.value)}
+										className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
+										required
+									/>
+								</div>
+								<div>
+									<label className="block text-sm text-zinc-400 mb-1">Priezvisko</label>
+									<input
+										type="text"
+										value={lastName}
+										onChange={(e) => setLastName(e.target.value)}
+										className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
+										required
+									/>
+								</div>
+							</div>
 
-              <div>
-                <label className="block text-sm text-zinc-400 mb-1">Emailová adresa</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
-                  required
-                  autoComplete="email"
-                />
-              </div>
+							<Turnstile onVerify={onTurnstileVerify} />
 
-              <Turnstile onVerify={onTurnstileVerify} />
+							<button
+								type="submit"
+								disabled={loading}
+								className="w-full bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white rounded-lg px-4 py-2.5 font-medium flex items-center justify-center gap-2 mt-4"
+							>
+								{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <User className="w-4 h-4" />}
+								Overit
+							</button>
+						</form>
+					)}
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white rounded-lg px-4 py-2.5 font-medium flex items-center justify-center gap-2 mt-4"
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
-                Odoslať kód
-              </button>
-            </form>
-          )}
+					{layer === 3 && !otpSent && (
+						<form onSubmit={handleRequestOtp}>
+							<div className="flex items-center gap-2 mb-4">
+								<Mail className="w-5 h-5 text-indigo-400" />
+								<h2 className="text-lg font-semibold">Emailove overenie</h2>
+							</div>
+							<p className="text-zinc-400 text-sm mb-4">Zadajte svoj email. Posleme vam 6-miestny overovaci kod.</p>
 
-          {/* Layer 3: OTP Input */}
-          {layer === 3 && otpSent && (
-            <form onSubmit={handleVerifyOtp}>
-              <div className="flex items-center gap-2 mb-4">
-                <KeyRound className="w-5 h-5 text-indigo-400" />
-                <h2 className="text-lg font-semibold">Zadajte overovací kód</h2>
-              </div>
-              <p className="text-zinc-400 text-sm mb-4">
-                Overovací kód bol odoslaný na <span className="text-white">{email}</span>.
-              </p>
+							<div>
+								<label className="block text-sm text-zinc-400 mb-1">Emailova adresa</label>
+								<input
+									type="email"
+									value={email}
+									onChange={(e) => setEmail(e.target.value)}
+									className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
+									required
+									autoComplete="email"
+								/>
+							</div>
 
-              <div>
-                <label className="block text-sm text-zinc-400 mb-1">6-miestny kód</label>
-                <input
-                  type="text"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-white text-center text-2xl tracking-widest focus:outline-none focus:border-indigo-500"
-                  maxLength={6}
-                  required
-                  autoComplete="one-time-code"
-                  inputMode="numeric"
-                />
-              </div>
+							<Turnstile onVerify={onTurnstileVerify} />
 
-              <button
-                type="submit"
-                disabled={loading || otp.length !== 6}
-                className="w-full bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white rounded-lg px-4 py-2.5 font-medium flex items-center justify-center gap-2 mt-4"
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
-                Prihlásiť sa
-              </button>
+							<button
+								type="submit"
+								disabled={loading}
+								className="w-full bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white rounded-lg px-4 py-2.5 font-medium flex items-center justify-center gap-2 mt-4"
+							>
+								{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+								Odoslat kod
+							</button>
+						</form>
+					)}
 
-              <button
-                type="button"
-                onClick={() => { setOtpSent(false); setOtp(''); setError(''); }}
-                className="w-full text-zinc-400 hover:text-white text-sm mt-3"
-              >
-                Odoslať kód znova
-              </button>
-            </form>
-          )}
-        </div>
+					{layer === 3 && otpSent && (
+						<form onSubmit={handleVerifyOtp}>
+							<div className="flex items-center gap-2 mb-4">
+								<KeyRound className="w-5 h-5 text-indigo-400" />
+								<h2 className="text-lg font-semibold">{isTwoFactorLogin ? '2FA overenie' : 'Zadajte overovaci kod'}</h2>
+							</div>
+							<p className="text-zinc-400 text-sm mb-4">
+								{isTwoFactorLogin
+									? <>2FA kod bol odoslany na <span className="text-white">{email}</span>.</>
+									: <>Overovaci kod bol odoslany na <span className="text-white">{email}</span>.</>}
+							</p>
 
-        <div className="text-center mt-6 space-y-3">
-          <a
-            href="mailto:lukasrajnic@elvoaq.com"
-            className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 text-sm"
-          >
-            <HelpCircle className="w-4 h-4" />
-            Potrebujete pomoc? Kontaktujte správcu
-          </a>
-          <p className="text-zinc-600 text-xs">
-            Elvoaq AG · graduation3boask.elvoaq.com
-          </p>
-        </div>
-      </div>
-    </div>
-  );
+							<div>
+								<label className="block text-sm text-zinc-400 mb-1">6-miestny kod</label>
+								<input
+									type="text"
+									value={otp}
+									onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+									className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-white text-center text-2xl tracking-widest focus:outline-none focus:border-indigo-500"
+									maxLength={6}
+									required
+									autoComplete="one-time-code"
+									inputMode="numeric"
+								/>
+							</div>
+
+							<button
+								type="submit"
+								disabled={loading || otp.length !== 6}
+								className="w-full bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white rounded-lg px-4 py-2.5 font-medium flex items-center justify-center gap-2 mt-4"
+							>
+								{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
+								Overit a pokracovat
+							</button>
+
+							{!isTwoFactorLogin && (
+								<button
+									type="button"
+									onClick={() => {
+										setOtpSent(false);
+										setOtp('');
+										setError('');
+									}}
+									className="w-full text-zinc-400 hover:text-white text-sm mt-3"
+								>
+									Odoslat kod znova
+								</button>
+							)}
+						</form>
+					)}
+
+					{layer === 4 && (
+						<form onSubmit={handleSetPassword}>
+							<div className="flex items-center gap-2 mb-4">
+								<Lock className="w-5 h-5 text-indigo-400" />
+								<h2 className="text-lg font-semibold">Nastavenie hesla</h2>
+							</div>
+							<p className="text-zinc-400 text-sm mb-4">Nastavte si vlastne heslo. Toto heslo budete pouzivat pri kazdom dalsom prihlaseni.</p>
+
+							<div className="space-y-3">
+								<div>
+									<label className="block text-sm text-zinc-400 mb-1">Nove heslo</label>
+									<input
+										type="password"
+										value={newPassword}
+										onChange={(e) => setNewPassword(e.target.value)}
+										className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
+										required
+										minLength={8}
+										autoComplete="new-password"
+									/>
+								</div>
+								<div>
+									<label className="block text-sm text-zinc-400 mb-1">Potvrdte heslo</label>
+									<input
+										type="password"
+										value={confirmPassword}
+										onChange={(e) => setConfirmPassword(e.target.value)}
+										className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
+										required
+										minLength={8}
+										autoComplete="new-password"
+									/>
+								</div>
+							</div>
+
+							<button
+								type="submit"
+								disabled={loading}
+								className="w-full bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white rounded-lg px-4 py-2.5 font-medium flex items-center justify-center gap-2 mt-4"
+							>
+								{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
+								Ulozit heslo a vstupit
+							</button>
+						</form>
+					)}
+				</div>
+
+				<div className="text-center mt-6 space-y-3">
+					<a href="mailto:lukasrajnic@elvoaq.com" className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 text-sm">
+						<HelpCircle className="w-4 h-4" />
+						Potrebujete pomoc? Kontaktujte spravcu
+					</a>
+					<p className="text-zinc-600 text-xs">Elvoaq AG · graduation3boask.elvoaq.com</p>
+				</div>
+			</div>
+		</div>
+	);
 }
